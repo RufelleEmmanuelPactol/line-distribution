@@ -3,11 +3,16 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import image from './image.jpg'
 
+const MultipleTimers = App.MultipleTimers;
+const Imagery = App.Imagery;
+const vizMode = false;
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <App />
+      {vizMode ? "<Imagery image={image}/>" : ""}
+    <MultipleTimers />
   </React.StrictMode>
 );
 
