@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useRef} from 'react';
-import {RotateCcw, Undo2, Plus, Minus, CornerDownLeft, Delete, Pencil} from 'lucide-react';
+import {RotateCcw, Undo2, Plus, Minus, CornerDownLeft, Delete, Pencil, Command} from 'lucide-react';
 
 function Imagery ({image}) {
   return (
@@ -25,8 +25,35 @@ const COLORS = [
 
 const colorFor = (number) => COLORS[(number - 1) % COLORS.length];
 
+const PRESETS = [
+  {
+    name: 'GFRIEND',
+    labels: ['Sowon', 'Yerin', 'Eunha', 'Yuju', 'SinB', 'Umji'],
+  },
+  {
+    name: 'Apink',
+    labels: ['Chorong', 'Bomi', 'Eunji', 'Namjoo', 'Hayoung'],
+  },
+  {
+    name: 'TWICE',
+    labels: ['Nayeon', 'Jeongyeon', 'Momo', 'Sana', 'Jihyo', 'Mina', 'Dahyun', 'Chaeyoung', 'Tzuyu'],
+  },
+  {
+    name: 'AHOF',
+    labels: ['Steven', 'Jeongwoo', 'Woongki', 'Shuaibo', 'Han', 'JL', 'Juwon', 'Chih En', 'Daisuke'],
+  },
+  {
+    name: 'BTS',
+    labels: ['Jin', 'Suga', 'J-Hope', 'RM', 'Jimin', 'V', 'Jungkook'],
+  },
+  {
+    name: "Girls' Generation",
+    labels: ['Taeyeon', 'Jessica', 'Sunny', 'Tiffany', 'Hyoyeon', 'Yuri', 'Sooyoung', 'Yoona', 'Seohyun'],
+  },
+];
+
 const MultipleTimers = () => {
-  const [MAX_DURATION, setDuration] = useState(5);
+  const [MAX_DURATION, setDuration] = useState(50);
   const inputRef = useRef(null)
   const MAX_TIMERS = 10;
   const [title, setTitle] = useState("Line Distribution");
@@ -37,6 +64,7 @@ const MultipleTimers = () => {
   const [timerHistory, setTimerHistory] = useState({});
   // 'normal' | 'reset' | 'undo' — drives the keyboard-action modes.
   const [mode, setMode] = useState('normal');
+  const [showPresets, setShowPresets] = useState(false);
   const MAX_DURATION_REF = useRef(MAX_DURATION);
   useEffect(() => {
     // Update the ref whenever MAX_DURATION changes
@@ -207,6 +235,35 @@ const MultipleTimers = () => {
     }
   };
 
+  const applyPreset = (preset) => {
+    const nextLabels = {};
+    const nextTimers = {};
+    const nextHistory = {};
+
+    preset.labels.forEach((label, index) => {
+      const number = index + 1;
+      nextLabels[number] = label;
+      nextTimers[number] = {
+        duration: MAX_DURATION,
+        elapsed: 0,
+        isRunning: false,
+      };
+      nextHistory[number] = [{
+        elapsed: 0,
+        isRunning: false,
+        label,
+      }];
+    });
+
+    setTitle(preset.name);
+    setVisibleTimers(preset.labels.length);
+    setTimerLabels(nextLabels);
+    setTimers(nextTimers);
+    setTimerHistory(nextHistory);
+    setMode('normal');
+    setShowPresets(false);
+  };
+
   // Keyboard control scheme:
   //   1-9, 0    → start/stop a timer (0 = timer 10)
   //   Enter     → enter RESET mode; next number resets that timer
@@ -221,6 +278,11 @@ const MultipleTimers = () => {
       // the text-field guard so they work even while a label is focused, and
       // they override the browser's native zoom shortcuts.
       if (e.metaKey || e.ctrlKey) {
+        if (key.toLowerCase() === 'k') {
+          e.preventDefault();
+          setShowPresets(prev => !prev);
+          return;
+        }
         if (key === '=' || key === '+') {
           e.preventDefault();
           addTimer();
@@ -238,9 +300,12 @@ const MultipleTimers = () => {
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
 
       if (key === 'Escape') {
+        setShowPresets(false);
         setMode('normal');
         return;
       }
+
+      if (showPresets) return;
 
       if (key === 'Enter') {
         e.preventDefault();
@@ -276,7 +341,7 @@ const MultipleTimers = () => {
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timers, visibleTimers, timerLabels, mode]);
+  }, [timers, visibleTimers, timerLabels, mode, showPresets, MAX_DURATION]);
 
   const lastTickRef = useRef(null);
   useEffect(() => {
@@ -400,6 +465,13 @@ const MultipleTimers = () => {
                     </div>
 
                     <button
+                        onClick={() => setShowPresets(true)}
+                        className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-[#f1f2f5] text-[13px] font-semibold text-[#3c3f47] hover:bg-[#e8e9ee] transition-colors"
+                    >
+                      <Command size={15} strokeWidth={2.4}/> Presets
+                    </button>
+
+                    <button
                         onClick={removeTimer}
                         disabled={visibleTimers <= 1}
                         className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-[#f1f2f5] text-[13px] font-semibold text-[#3c3f47] hover:bg-[#e8e9ee] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
@@ -416,6 +488,31 @@ const MultipleTimers = () => {
                   </div>
               )}
             </div>
+
+            {showPresets && (
+                <div className="mt-4 max-w-xl rounded-xl border border-[#e6e7ec] bg-white shadow-[0_18px_50px_rgba(22,22,26,0.12)] overflow-hidden">
+                  <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-[#ececef]">
+                    <Command size={15} strokeWidth={2.4} className="text-[#5e6ad2]"/>
+                    <span className="text-[13px] font-bold text-[#3c3f47]">Presets</span>
+                    <span className="ml-auto text-[11px] text-[#9ca0ab]"><Kbd>⌘</Kbd> <Kbd>K</Kbd></span>
+                  </div>
+                  <div className="p-1.5">
+                    {PRESETS.map((preset) => (
+                        <button
+                            key={preset.name}
+                            type="button"
+                            onClick={() => applyPreset(preset)}
+                            className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-[#f6f6f8] transition-colors"
+                        >
+                          <span className="w-28 shrink-0 text-[13px] font-extrabold text-[#16161a]">{preset.name}</span>
+                          <span className="min-w-0 truncate text-[12px] font-medium text-[#8a8f98]">
+                            {preset.labels.join(', ')}
+                          </span>
+                        </button>
+                    ))}
+                  </div>
+                </div>
+            )}
 
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <button
@@ -550,6 +647,9 @@ const MultipleTimers = () => {
             </span>
             <span className="flex items-center gap-1.5">
               <Kbd>⌘</Kbd><Kbd>+</Kbd> / <Kbd>⌘</Kbd><Kbd>–</Kbd> add / remove line
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Kbd>⌘</Kbd><Kbd>K</Kbd> presets
             </span>
           </div>
         </div>
